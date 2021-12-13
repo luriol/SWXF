@@ -22,50 +22,49 @@ from matplotlib import pyplot as plt
 
 
 
-# Define some constants use MKS units
-nm = 1e-9
-cm = .01
-micro = 1e-6
-pi =  scc.pi
-degree = pi/180
+#%% Section 1 Define some constants use MKS units
+from scipy.constants import nano, micro, centi, pi, degree 
 N_A = scc.physical_constants["Avogadro constant"][0]
 r_0 = scc.physical_constants["classical electron radius"][0]
 q_e = scc.physical_constants["elementary charge"][0]
 h = scc.physical_constants["Planck constant"][0]
 c = scc.physical_constants["speed of light in vacuum"][0]
 
-# Define some material properties
-D = 5*nm                # Diameter of gold nanoparticles
-V = (1/6)*pi*D**3       # Volume of gold nanoparticles
+#%% Section 2 Define nanoparticles
+D = 5*nano                  # Diameter of gold nanoparticles
+V = (1/6)*pi*D**3           # Volume of gold nanoparticles
 # Calculate number of gold atoms in nanoparticle
-N_gold = V*xdb.atomic_density('Au')*N_A/xdb.atomic_mass('Au')/cm**3
+rho = xdb.atomic_density('Au')
+m = xdb.atomic_mass('Au')
+N_gold = V*rho*N_A/m/centi**3
+print('Number of gold atoms per nanoparticle = {0:7.0f}'.format(N_gold))
+
+#%% Section 3 Define surface coverage
 # now assume a density of one nanoparticle for every 100 nm^2 and find the
 # surface coverage of gold
-print('Number of gold atoms per nanoparticle = {0:7.0f}'.format(N_gold))
-Coverage = 1/100**2/nm**2       #number of gold nanoparticles per nm^2
-N_per_A = N_gold*Coverage
-print('Number of gold atoms per m^2 = {0:7.3g}'.format(N_per_A))
-# Next find the fluorescence cross section per unit area on the surface
+spacing = 100*nano # spacing between nanoparticles
+Coverage = 1/spacing**2     
+S_N = N_gold*Coverage
+print('Number of gold atoms per m^2 = {0:7.3g}'.format(S_N))
+
+#%% Section 4 Calculation of fluorescent cross section and yeild
+# Next find the fluorescence cross section per unit area 
+# on the surface
 # Pick an energy just above the fluorescence  L edge of gold
 E = 12000       # Energies are assumed to be in eV
-# Calculate the cross section per atom
-sig = xdb.mu_elam('Au', E, kind='photo')*xdb.atomic_mass('Au')*cm**2/N_A
+lam = h*c/E/q_e
+# Calculate the absorption cross section per atom
+sig_a = 2*r_0*lam*xdb.f2_chantler('Au', E)
 # Correct for the fluorescence yield
 fyield = xdb.xray_edges('Au')['L3'][1]
-sig_total_per_meter= sig*N_per_A*cm**2*fyield
-print('fractional cross section per meter = {0:7.3g}'.format(sig_total_per_meter))
+sig_a = sig_a*fyield
 # Assume an incident beam with 10^10 photons/s
 I0 = 1e10
 # Assume an incident angle of 0.1 degree
-# First calculation, ignore reflection, just calculate fluorescence yield
-# assuming beam comes in at a small grazing angle and doesn't reflect
 alpha = 0.1*degree
-A_beam = (20*micro)**2
-phi0 = I0/A_beam
-sig_total = sig_total_per_meter*A_beam/alpha
-yeild = sig_total*phi0
-print('expect total yeild of {0:7.3f} photons/s above critical angle'.format(yeild))
-# Now define a function to represent the standing wave assuming specular reflectivity 
+yeild = sig_a*S_N*I0/alpha
+print('expect total yeild of {0:7.3e} photons/s above critical angle'.format(yeild))
+#%% Section 5 Now define a function to represent the standing wave assuming specular reflectivity 
 # from the surface using Fresnels equations for x-rays
 #
 # Take the mirror surface to be Silicon (element #14)
