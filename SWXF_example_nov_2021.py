@@ -64,71 +64,104 @@ I0 = 1e10
 alpha = 0.1*degree
 yeild = sig_a*S_N*I0/alpha
 print('expect total yeild of {0:7.3e} photons/s above critical angle'.format(yeild))
-# #%% Section 5 Now define a function to represent the standing wave assuming specular reflectivity 
-# # from the surface using Fresnels equations for x-rays
-# #
-# # Take the mirror surface to be Silicon (element #14)
-# #
-# # First define a function which calculates the x-ray index of refraction for
-# # the mirror
-# def n_elem(elem,E): 
-#     # subroutine to calculate the x-ray index of refraction of 
-#     # an elemental material
-#     rho = xdb.atomic_density(elem)
-#     f = xdb.atomic_number(elem) + xdb.f1_chantler(elem,E)
-#     Ne = rho*f*N_A*1e6/xdb.atomic_mass(elem)    
-#     lam = h*c/q_e/E
-#     n = 1.0 - r_0*Ne*lam**2/2.0/scc.pi
-#     return n
-# def n_water(E):
-#     # subroutine to calculate the x-ray index of refraction of water  
-#     f1_H = xdb.atomic_number('H') + xdb.f1_chantler('H',E)
-#     f2_H = xdb.f2_chantler('H',E)
-#     f1_O = xdb.atomic_number('O') + xdb.f1_chantler('O',E)
-#     f2_O = xdb.f2_chantler('O',E)
-#     A_H = xdb.atomic_mass('H') 
-#     A_O = xdb.atomic_mass('O') 
-#     f = 2*(f1_H+1j*f2_H)+(f1_O+1j*f2_O)
-#     A = A_O+2*A_H
-#     rho = 1.0 # density of water 1 g/cc
-#     Ne = rho*f*N_A*1e6/A    
-#     lam = h*c/q_e/E
-#     n = 1.0 - r_0*Ne*lam**2/2.0/scc.pi
-#     return n
+#%% Section 5 Now define a function to represent the standing wave assuming specular reflectivity 
+# from the surface using Fresnels equations for x-rays
+#
+# Take the mirror surface to be Silicon (element #14)
+#
+# First define a function which calculates the x-ray index of refraction for
+# the mirror
+def n_elem(elem,E): 
+    # subroutine to calculate the x-ray index of refraction of 
+    # an elemental material
+    rho = xdb.atomic_density(elem)
+    f = xdb.atomic_number(elem) + xdb.f1_chantler(elem,E) + 1j*xdb.f2_chantler(elem,E)
+    Ne = rho*f*N_A*1e6/xdb.atomic_mass(elem)    
+    lam = h*c/q_e/E
+    n = 1.0 - r_0*Ne*lam**2/2.0/pi
+    return n
+def n_water(E):
+    # subroutine to calculate the x-ray index of refraction of water  
+    f1_H = xdb.atomic_number('H') + xdb.f1_chantler('H',E)
+    f2_H = xdb.f2_chantler('H',E)
+    f1_O = xdb.atomic_number('O') + xdb.f1_chantler('O',E)
+    f2_O = xdb.f2_chantler('O',E)
+    A_H = xdb.atomic_mass('H') 
+    A_O = xdb.atomic_mass('O') 
+    f = 2*(f1_H+1j*f2_H)+(f1_O+1j*f2_O)
+    A = A_O+2*A_H
+    rho = 1.0 # density of water 1 g/cc
+    Ne = rho*f*N_A*1e6/A    
+    lam = h*c/q_e/E
+    n = 1.0 - r_0*Ne*lam**2/2.0/scc.pi
+    return n
 
-# def swave(alpha,z,E):
-#     k0 = 2*pi*E*q_e/h/c
-#     thc_si = np.sqrt(2*(1-n_elem(14,E)))
-#     thc_water = np.sqrt(2*(1-n_water(E)))
-#     thc=np.sqrt(thc_si**2-thc_water**2)
-#     alphap = np.sqrt(alpha**2-thc**2)
-#     R=(alpha-alphap)/(alpha+alphap)
-#     Er=R*np.exp(-1j*k0*z*np.sin(alpha))
-#     E0=np.exp(1j*k0*z*np.sin(alpha))
-#     return abs(E0+Er)**2
+def swave_z(alpha,z,E):
+    # calculates electric field standing wave
+    # from reflectivity
+    alpha = alpha +0j
+    k0 = 2*pi*E*q_e/h/c
+    thc = np.arccos(n_elem(14,E)/n_water(E))
+    alphap = np.sqrt(alpha**2-thc**2)+0j
+    r=(alpha-alphap)/(alpha+alphap)
+    t = 2*alpha/(alpha+alphap)
+    # dimension intensity return vector
+    # same size as z
+    I = z*0
+    r1 = z<0
+    r2 = z>=0
+    I[r1] = np.abs(t*np.exp(2j*k0*z[r1]*alphap))**2
+    I[r2] = np.abs(np.exp( 1j*k0*z[r2]*np.sin(alpha)) 
+                   + r*np.exp(-1j*k0*z[r2]*np.sin(alpha)))**2
+    return I
 
-# #%% Now make some plots of the standing wave
-# # Now calculate standing wave
-# plt.figure(1)
-# plt.clf()
-# z=np. linspace(0,100)*nm # setup an array of height positions
-# alpha = 0.08*degree # incident angle
-# Etot = swave(alpha,z,E)
-# plt.plot(z/nm,Etot)
-# # indicate position of Au nanoparticles 5 nm above the surface
-# z_au = 5*nm
-# plt.figure(1)
-# plt.clf()
-# plt.plot(z/nm,Etot)
-# plt.plot(np.array([z_au,z_au])/nm,np.array([0,4]),'--r')
-# plt.xlabel('height above surface (nm)')
-# plt.ylabel('$I/I_0$')
-# plt.title('Standing wave amplitude for {0:2.0f} KeV wave above Si surface at {1:3.2f} deg'.format(
-#     E/1000,alpha/degree))
-# # second plot calculate fluorescence yeild vs. angle
-# alpha = np.linspace(0.01,2,1000)*degree
-# Iz = swave(alpha,z_au,E)
-# fyeild = Iz*sig_total_per_meter*A_beam*phi0/(alpha*0+.1*degree)
-# plt.figure(2)
-# plt.clf()
-# plt.plot(alpha/degree,fyeild)
+def swave_a(alpha,z,E):
+    # calculates electric field standing wave
+    # from reflectivity
+    alpha = alpha +0j
+    k0 = 2*pi*E*q_e/h/c
+    thc = np.arccos(n_elem(14,E)/n_water(E))
+    alphap = np.sqrt(alpha**2-thc**2)+0j
+    r=(alpha-alphap)/(alpha+alphap)
+    t = 2*alpha/(alpha+alphap)
+    # dimension intensity return vector
+    # same size as z
+    I = alpha*0
+    if (z<0):
+        I = np.abs(t*np.exp(2j*k0*z*alphap))**2
+    else:
+        I = np.abs(np.exp( 1j*k0*z*np.sin(alpha)) 
+                   + r*np.exp(-1j*k0*z*np.sin(alpha)))**2
+    return I
+
+#%% Section 6 Now make some plots of the standing wave
+# Calculate standing wave intensity vs. angle
+plt.figure(1)
+plt.clf()
+z=np. linspace(-20,50,10000)*nano # setup an array of height positions
+alpha = 0.08*degree # incident angle
+
+Itot = swave_z(alpha,z,E)
+plt.plot(z/nano,Itot)
+# Put a nanoparticle at a height of 5 nm and
+# calculate fluorescence vs. incident angle.
+
+z_au = 5*nano
+plt.figure(1)
+plt.clf()
+plt.plot(z/nano,Itot)
+plt.plot(np.array([z_au,z_au])/nano,np.array([0,4]),'--r')
+plt.xlabel('height above surface (nm)')
+plt.ylabel('$I/I_0$')
+plt.title('Standing wave amplitude for {0:2.0f} KeV wave above Si surface at {1:3.2f} deg'.format(
+    E/1000,alpha/degree))
+# second plot calculate fluorescence yeild vs. angle
+alpha = np.linspace(0.01,2,1000)*degree
+Iz = swave_a(alpha,z_au,E)
+fyeild = Iz*sig_a*S_N*I0/np.abs(alpha)
+plt.figure(2)
+plt.clf()
+plt.plot(alpha/degree,fyeild)
+plt.xlabel('incident angle [deg]')
+plt.ylabel('Fluorescence yield')
+plt.title('Au nanoparticle at height z = 5 nm')
