@@ -9,7 +9,7 @@ standing wave fluorescence from labeled proteins
 on a solid support.  
 
 Laurence Lurio, Northern Illinois University
-December 13, 2021
+December 31, 2021
 
 @author: lluri
 """
