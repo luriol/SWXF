@@ -35,5 +35,5 @@ fpp = xraydb.f2_chantler('Au',E)
 print('fpp Au = {0:4.1f}'.format(fpp))
 r0 = scc.physical_constants['classical electron radius'][0]
 r0 /= scc.angstrom
-rat =2*lam*fpp/r0/iM
+rat =2*lam*fpp/r0/iM/4/np.pi
 print('fluorescence to compton ratio {0:7.3g}'.format(rat))
