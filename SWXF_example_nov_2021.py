@@ -59,7 +59,7 @@ sig_a = 2*r_0*lam*xdb.f2_chantler('Au', E)
 fyield = xdb.xray_edges('Au')['L3'][1]
 sig_a = sig_a*fyield
 # Assume an incident beam with 10^10 photons/s
-I0 = 1e10
+I0 = 1e12
 # Assume an incident angle of 0.1 degree
 alpha = 0.1*degree
 yeild = sig_a*S_N*I0/alpha
